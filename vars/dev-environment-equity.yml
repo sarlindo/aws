@@ -1,0 +1,61 @@
+---
+# set these parameters to control the region, keypair, and AMI that are launched
+ec2_region: us-east-1
+instances_keypair: ansible
+image_id_win: ami-40f0d32a
+
+# security groups to be created
+security_groups:
+  - name: ssh
+    desc: the security group for the jumphost
+    rules:
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 0.0.0.0/0
+
+  - name: web
+    desc: the security group for the web server 
+    rules:
+      - proto: tcp
+        from_port: "80"
+        to_port: "80"
+        cidr_ip: 0.0.0.0/0
+      - proto: tcp
+        from_port: "443"
+        to_port: "443"
+        cidr_ip: 0.0.0.0/0
+
+  - name: winrdp
+    desc: the security group for the winrdp server
+    rules:
+      - proto: tcp
+        from_port: 5986
+        to_port: 5986
+        cidr_ip: 0.0.0.0/0
+      - proto: tcp
+        from_port: 5985
+        to_port: 5985
+        cidr_ip: 0.0.0.0/0
+      - proto: tcp
+        from_port: 3389
+        to_port: 3389
+        cidr_ip: 0.0.0.0/0
+ 
+# Instances to launch be launched.
+# If you re-run the playbook after modifying exact_count,
+# instances will be terminated if the actual count > exact_count,
+# or new instances will be launched if actual count < exact_count.
+
+ec2_instances:
+
+  - instance_type: t2.micro
+    image: "{{ image_id_win }}"
+    keypair: "{{instances_keypair}}"
+    group: ['web', 'winrdp']
+    instance_tags:
+        Name: webwin
+    exact_count: 0
+    count_tag:
+        Name: webwin
+    user_data: "{{ lookup('template', 'userdata.txt.j2') }}"

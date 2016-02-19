@@ -1,0 +1,10 @@
+[local]
+localhost
+
+[win]
+
+[win:vars]
+ansible_connection=winrm
+ansible_port=5986
+ansible_user=Administrator
+ansible_password={{ win_initial_password }}
