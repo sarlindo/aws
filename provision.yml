@@ -41,9 +41,6 @@
     debug: msg="Allocated IP inside the VPC is {{ item }}"
     with_items: ec2_result.results
 
-# open windows firewall
-# netsh advfirewall firewall add rule name="WinRM-HTTP" dir=in localport=5985 protocol=TCP action=allow
-
   - name: wait for WinRM to answer on all hosts
     wait_for:
       port: 5986
@@ -69,9 +66,6 @@
     win_feature:
       name: AS-Web-Support
 
-  #- name: copy ODAC zip to server
-  #  win_copy: src=./files/ODAC121024_x64.zip dest=C:\Users\Administrator\AppData\Local\Temp
-
   - name: Download ODAC
     win_get_url:
       url: 'https://github.com/sarlindo/odac/releases/download/v12.1.0/ODAC121024_x64.zip'
@@ -94,9 +88,6 @@
     raw: 'C:\Users\Administrator\AppData\Local\Temp\ODAC121024_x64\setup.exe -waitforcompletion -silent -responseFile C:\Users\Administrator\AppData\Local\Temp\ODAC121024_x64\odacclient.rsp'
     when: not odac_installed.stat.exists
 
-  - name: copy Web App zip to server
-    win_copy: src=./files/WebApplication1.zip dest=C:\Users\Administrator\AppData\Local\Temp
-
   - name: Install WebPI
     win_package:
       path="https://github.com/sarlindo/WebPI/releases/download/v5.0/WebPlatformInstaller_amd64_en-US.msi"
@@ -106,3 +97,29 @@
   - name: Install Web Deploy
     win_webpicmd:
       name: WDeploy
+
+  - name: Download link star webapp
+    win_get_url:
+      url: 'https://github.com/sarlindo/linkstarasp/releases/download/v1.0/linkstarasp.zip'
+      dest: 'c:\users\administrator\appdata\local\temp\linkstarasp.zip'
+
+  - name: Unzip linkstar app zip file
+    win_unzip:
+      src: c:\users\administrator\appdata\local\temp\linkstarasp.zip
+      dest: C:\app\sarlindo
+      creates: C:\app\sarlindo\linkstarasp
+
+  - name: Stop Default site
+    win_iis_website:
+      name: "Default Web Site"
+      state: stopped
+
+  - name: LinkStar IIS site 
+    win_iis_website: 
+      name: "linkstarasp"
+      state: started
+      port: 80
+      application_pool: "linkstar"
+      physical_path: 'c:\app\sarlindo\linkstarasp'
+      parameters: 'logfile.directory:c:\app\sarlindo\linkstarasp\logs'
+    register: linkstarwebsite
