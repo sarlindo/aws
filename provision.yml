@@ -37,10 +37,6 @@
     with_items: ec2_instances
     register: ec2_result
 
-  - name: output the IP
-    debug: msg="Allocated IP inside the VPC is {{ item }}"
-    with_items: ec2_result.results
-
   - name: wait for WinRM to answer on all hosts
     wait_for:
       port: 5986
@@ -56,6 +52,15 @@
     changed_when: false
     with_items: "{{ ec2_result.results|default([]) }}"
 
+  - name: associate an elastic IP with an instance
+    ec2_eip: 
+      region: "{{ ec2_region }}"
+      ec2_access_key: "{{ ec2_access_key }}"
+      ec2_secret_key: "{{ ec2_secret_key }}"
+      device_id: "{{ item.tagged_instances[0].id }}"
+      ip: 52.71.198.77
+    with_items: "{{ ec2_result.results|default([]) }}"
+
 - name: web app setup
   hosts: win
   gather_facts: no
@@ -66,34 +71,29 @@
     win_feature:
       name: AS-Web-Support
 
+  - name: Check to see if ODAC is installed
+    win_stat: path='C:\oracle\client\product\12.1.0\client_1'
+    register: odac_installed
+
   - name: Download ODAC
     win_get_url:
       url: 'https://github.com/sarlindo/odac/releases/download/v12.1.0/ODAC121024_x64.zip'
       dest: 'c:\users\administrator\appdata\local\temp\ODAC121024_x64.zip'
+    when: not odac_installed.stat.exists
 
   - name: Unzip ODAC zip file
     win_unzip:
       src: C:\Users\Administrator\AppData\Local\Temp\ODAC121024_x64.zip
       dest: C:\Users\Administrator\AppData\Local\Temp\ODAC121024_x64
       creates: C:\Users\Administrator\AppData\Local\Temp\ODAC121024_x64
+    when: not odac_installed.stat.exists
 
   - name: copy ODAC response file
     win_copy: src=./files/odacclient.rsp dest=C:\Users\Administrator\AppData\Local\Temp\ODAC121024_x64
-
-  - name: Check to see if ODAC is installed
-    win_stat: path='C:\oracle\client\product\12.1.0\client_1'
-    register: odac_installed
+    when: not odac_installed.stat.exists
 
   - name: Install ODAC
     raw: 'C:\Users\Administrator\AppData\Local\Temp\ODAC121024_x64\setup.exe -waitforcompletion -noconsole -silent -responseFile C:\Users\Administrator\AppData\Local\Temp\ODAC121024_x64\odacclient.rsp'
-    when: not odac_installed.stat.exists
-
-  - name: Check to see if ODAC is installed and keep looping
-    win_stat: path='C:\oracle\client\product\12.1.0\client_1'
-    register: odac_installed
-    until: odac_installed.stat.exists
-    retries: 25
-    delay: 10
     when: not odac_installed.stat.exists
 
   - name: Install WebPI
@@ -117,10 +117,10 @@
       dest: C:\app\sarlindo
       creates: C:\app\sarlindo\linkstarasp
 
-  - name: Stop Default site
-    win_iis_website:
-      name: "Default Web Site"
-      state: stopped
+#  - name: Stop Default site
+#    win_iis_website:
+#      name: "Default Web Site"
+#      state: stopped
 
   - name: Remove Default site
     win_iis_website:
@@ -138,6 +138,7 @@
 
   - name: restart windows
     raw: 'powershell restart-computer -Force'
+    when: not odac_installed.stat.exists
 
   - name: wait for windows system reboot
     local_action:
