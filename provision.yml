@@ -22,7 +22,7 @@
       password: linkstar
       size: 10
       wait: yes
-      wait_timeout: 1200
+      wait_timeout: 2000
       vpc_security_groups: sg-7ab71302
       tags:
         Environment: dev
@@ -31,7 +31,7 @@
     register: rds_result
 
   - name: run sqlline
-    shell: sqlline -u jdbc:oracle:thin:@{{ item.instance.endpoint }}:1521:ORCL -n linkstar -p 1nsecure -d oracle.jdbc.driver.OracleDriver < ./files/createemp.sql
+    shell: sqlline -u jdbc:oracle:thin:@{{ item.instance.endpoint }}:1521:ORCL -n linkstar -p linkstar -d oracle.jdbc.driver.OracleDriver < ./files/createemp.sql
     with_items: "{{ rds_result.results|default([]) }}"
 
   - name: write rds host info to file
