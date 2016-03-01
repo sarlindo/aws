@@ -166,10 +166,6 @@
       dest: C:\app\sarlindo
       creates: C:\app\sarlindo\linkstarasp
 
-# replace linkstar.cgxmjxhypelr.us-east-1.rds.amazonaws.com with oraclerdsendpoint
-# C:\app\sarlindo\linkstarasp\Web.config
-# (HOST=linkstar.cgxmjxhypelr.us-east-1.rds.amazonaws.com)
-
   - name: update web.config connection string
     win_lineinfile: 
       dest: C:\app\sarlindo\linkstarasp\Web.config
