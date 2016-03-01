@@ -1,4 +1,48 @@
 ---
+- name: Provision aws oracle rds
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  vars_files:
+    - vars/dev-environment.yml
+    - vars/aws-creds.yml
+
+  tasks:
+  - name: Launch RDS instances
+    rds:
+      region: "{{ ec2_region }}"
+      ec2_access_key: "{{ ec2_access_key }}"
+      ec2_secret_key: "{{ ec2_secret_key }}"
+      command: create
+      instance_name: oraclelinkstardb
+      db_engine: oracle-se
+      instance_type: db.t2.micro
+      username: linkstar
+      password: linkstar
+      size: 10
+      wait: yes
+      wait_timeout: 1200
+      vpc_security_groups: sg-7ab71302
+      tags:
+        Environment: dev
+        Application: linkstar
+    with_items: ec2_instances
+    register: rds_result
+
+  - name: run sqlline
+    shell: sqlline -u jdbc:oracle:thin:@{{ item.instance.endpoint }}:1521:ORCL -n linkstar -p 1nsecure -d oracle.jdbc.driver.OracleDriver < /home/arlindo/projects/aws/files/createemp.sql
+    with_items: "{{ rds_result.results|default([]) }}"
+
+  - name: write rds host info to file
+    local_action: 
+      module: copy 
+      content: "{{ item.instance.endpoint }}"
+      dest: ./files/rdsendpoint.txt
+    with_items: "{{ rds_result.results|default([]) }}"
+
+#######
+
 - name: Provision ec2 instances based on the environment
   hosts: localhost
   connection: local
@@ -61,10 +105,15 @@
       ip: 52.71.198.77
     with_items: "{{ ec2_result.results|default([]) }}"
 
+########
+
 - name: web app setup
   hosts: win
   gather_facts: no
   vars_files: [ "vars/aws-creds.yml" ]
+  vars: 
+    oraclerdsendpoint: "{{ lookup('file', './files/rdsendpoint.txt') }}"
+
   tasks:
 
   - name: ensure IIS and ASP.NET are installed
@@ -117,10 +166,15 @@
       dest: C:\app\sarlindo
       creates: C:\app\sarlindo\linkstarasp
 
-#  - name: Stop Default site
-#    win_iis_website:
-#      name: "Default Web Site"
-#      state: stopped
+# replace linkstar.cgxmjxhypelr.us-east-1.rds.amazonaws.com with oraclerdsendpoint
+# C:\app\sarlindo\linkstarasp\Web.config
+# (HOST=linkstar.cgxmjxhypelr.us-east-1.rds.amazonaws.com)
+
+  - name: update web.config connection string
+    win_lineinfile: 
+      dest: C:\app\sarlindo\linkstarasp\Web.config
+      regexp: \(HOST=.*\)
+      line: connectionString="Provider=OraOLEDB.Oracle;Data Source=(DESCRIPTION=(CID=GTU_APP)(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST={{ oraclerdsendpoint }})(PORT=1521)))(CONNECT_DATA=(SID=orcl)(SERVER=DEDICATED)));User Id=linkstar;Password=linkstar;"
 
   - name: Remove Default site
     win_iis_website:
@@ -147,3 +201,4 @@
         host: "{{ ansible_host }}"
         timeout: 600
         delay: 30
+    when: not odac_installed.stat.exists

@@ -8,6 +8,14 @@ image_id_win: ami-42596f28
 
 # security groups to be created
 security_groups:
+  - name: rds
+    desc: the security group for the oracle rds db server
+    rules:
+      - proto: tcp
+        from_port: 1521
+        to_port: 1521
+        cidr_ip: 0.0.0.0/0
+
   - name: ssh
     desc: the security group for the jumphost
     rules:
