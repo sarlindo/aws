@@ -129,6 +129,7 @@
   - name: ensure IIS and ASP.NET are installed
     win_feature:
       name: AS-Web-Support
+      state: present
 
   - name: Check to see if ODAC is installed
     win_stat: path='C:\oracle\client\product\12.1.0\client_1'
@@ -155,15 +156,15 @@
     raw: 'C:\Users\Administrator\AppData\Local\Temp\ODAC121024_x64\setup.exe -waitforcompletion -noconsole -silent -responseFile C:\Users\Administrator\AppData\Local\Temp\ODAC121024_x64\odacclient.rsp'
     when: not odac_installed.stat.exists
 
-  - name: Install WebPI
-    win_package:
-      path="https://github.com/sarlindo/WebPI/releases/download/v5.0/WebPlatformInstaller_amd64_en-US.msi"
-      Product_Id="{4D84C195-86F0-4B34-8FDE-4A17EB41306A}"
-      Arguments="/quiet"
+#  - name: Install WebPI
+#    win_package:
+#      path="https://github.com/sarlindo/WebPI/releases/download/v5.0/WebPlatformInstaller_amd64_en-US.msi"
+#      Product_Id="{4D84C195-86F0-4B34-8FDE-4A17EB41306A}"
+#      Arguments="/quiet"
 
-  - name: Install Web Deploy
-    win_webpicmd:
-      name: WDeploy
+#  - name: Install Web Deploy
+#    win_webpicmd:
+#      name: WDeploy
 
   - name: Download link star webapp
     win_get_url:
