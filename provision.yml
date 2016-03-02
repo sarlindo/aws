@@ -27,7 +27,7 @@
       tags:
         Environment: dev
         Application: linkstar
-    with_items: ec2_instances
+    with_items: "{{ ec2_instances }}"
 
   - name: get RDS instance facts
     local_action: 
@@ -37,7 +37,7 @@
       ec2_secret_key: "{{ ec2_secret_key }}"
       command: facts 
       instance_name: oraclelinkstardb 
-    with_items: ec2_instances 
+    with_items: "{{ ec2_instances }}" 
     register: rds_facts
 
   - name: run sqlline
@@ -72,7 +72,7 @@
       region: "{{ ec2_region }}"
       ec2_access_key: "{{ ec2_access_key }}"
       ec2_secret_key: "{{ ec2_secret_key }}"
-    with_items: security_groups
+    with_items: "{{ security_groups }}"
 
   - name: Launch instances
     ec2: 
@@ -88,7 +88,7 @@
       count_tag: "{{ item.count_tag }}"
       wait: yes
       wait_timeout: 500
-    with_items: ec2_instances
+    with_items: "{{ ec2_instances }}"
     register: ec2_result
 
   - name: wait for WinRM to answer on all hosts
@@ -209,3 +209,11 @@
         timeout: 600
         delay: 30
     when: not odac_installed.stat.exists
+
+  - name: send hipchat message to room
+    local_action:
+      module: hipchat
+      api: "https://api.hipchat.com/v2/"
+      token: 2OJZJjTp3CTfNYg2pAVafpY2UwT70p9lOAGMYyiX
+      room: middlewareautomation
+      msg: "LinkStar Ansible Deploy Finished"
